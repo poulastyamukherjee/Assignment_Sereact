@@ -1,0 +1,5 @@
+flask
+urdfpy
+websockets
+pyrender
+trimesh[easy]
