@@ -4,19 +4,14 @@ import time
 import random  # For simulating variations
 import json
 import queue
+from urdfpy import URDF
 
 class RobotArm:
     """Represents the robot arm, managing its joints."""
-    def __init__(self):
-        """Initializes the robot arm with a predefined set of joints."""
-        self.joints = [
-            {"name": "base", "min_angle": -180, "max_angle": 180, "current_angle": 0},
-            {"name": "shoulder", "min_angle": -90, "max_angle": 90, "current_angle": 0},
-            {"name": "elbow", "min_angle": 0, "max_angle": 180, "current_angle": 0},
-            {"name": "wrist_pitch", "min_angle": -90, "max_angle": 90, "current_angle": 0},
-            {"name": "wrist_roll", "min_angle": -180, "max_angle": 180, "current_angle": 0},
-            {"name": "gripper", "min_angle": 0, "max_angle": 1, "current_angle": 0},  # 0 for open, 1 for closed
-        ]
+    def __init__(self, urdf_file):
+        """Initializes the robot arm from a URDF file."""
+        self.robot = URDF.load(urdf_file)
+        self.joint_states = {joint.name: 0 for joint in self.robot.joints if joint.joint_type != 'fixed'}
 
     def get_joint_state(self, joint_name):
         """
@@ -26,9 +21,14 @@ class RobotArm:
         Returns:
             dict or None: The joint's state if found, otherwise None.
         """
-        for joint in self.joints:
-            if joint["name"] == joint_name:
-                return joint
+        for joint in self.robot.joints:
+            if joint.name == joint_name:
+                return {
+                    "name": joint.name,
+                    "min_angle": joint.limit.lower if joint.limit else None,
+                    "max_angle": joint.limit.upper if joint.limit else None,
+                    "current_angle": self.joint_states.get(joint.name)
+                }
         return None
 
     def set_joint_angle(self, joint_name, angle):
@@ -40,10 +40,13 @@ class RobotArm:
         Returns:
             bool: True if the angle was set successfully, otherwise False.
         """
-        joint = self.get_joint_state(joint_name)
-        if joint:
-            if joint["min_angle"] <= angle <= joint["max_angle"]:
-                joint["current_angle"] = angle
+        joint_info = self.get_joint_state(joint_name)
+        if joint_info:
+            min_angle = joint_info["min_angle"]
+            max_angle = joint_info["max_angle"]
+            if (min_angle is None or angle >= min_angle) and \
+               (max_angle is None or angle <= max_angle):
+                self.joint_states[joint_name] = angle
                 return True
         return False
 
@@ -53,7 +56,11 @@ class RobotArm:
         Returns:
             list: A list of dictionaries, each representing a joint's state.
         """
-        return self.joints
+        states = []
+        for joint in self.robot.joints:
+            if joint.joint_type != 'fixed':
+                states.append(self.get_joint_state(joint.name))
+        return states
 
 # Create a single instance of the robot arm
-robot_arm = RobotArm()
+robot_arm = RobotArm("robot.urdf")
