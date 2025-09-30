@@ -63,4 +63,8 @@ class RobotArm:
         return states
 
 # Create a single instance of the robot arm
-robot_arm = RobotArm("robot.urdf")
+robot_model_file_path = "/home/pouri/workspace/Assignment_Sereact/urdfpy/tests/data/ur5/ur5.urdf"
+robot_arm = URDF.load(robot_model_file_path)
+
+for link in robot_arm.links:
+    print(f"Link Name: {link.name}")
