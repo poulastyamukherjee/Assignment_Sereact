@@ -1,16 +1,24 @@
 import threading
 import time
 import json
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from urdfpy import URDF
 import math
 import asyncio
+import os
 from app_websocket import send_to_all, run_server as run_websocket_server
 
-app = Flask(__name__)
+# Get the absolute path of the directory where this script is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Construct paths relative to the script's location
+FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'frontend'))
+URDF_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'urdfpy', 'tests', 'data'))
+
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 
 # Load the robot model
-robot_model_file_path = "/home/pouri/workspace/Assignment_Sereact/urdfpy/tests/data/ur5/ur5.urdf"
+robot_model_file_path = os.path.join(URDF_DIR, 'ur5', 'ur5.urdf')
 robot_arm = URDF.load(robot_model_file_path)
 
 # Initialize the current position of the robot arm
@@ -77,6 +85,14 @@ def set_joint_angles(joint_angles):
     global current_joint_angles
     for joint_name, angle in joint_angles.items():
         current_joint_angles[joint_name] = angle
+
+@app.route('/')
+def index():
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+@app.route('/urdf/<path:filename>')
+def serve_urdf(filename):
+    return send_from_directory(os.path.join(URDF_DIR, 'ur5'), filename)
 
 @app.route('/move', methods=['POST'])
 def move_robot():

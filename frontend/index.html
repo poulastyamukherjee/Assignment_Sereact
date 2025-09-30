@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6-Axis Robot Arm Control & Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            overflow: hidden;
+        }
+
+        #container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            grid-template-rows: 60px 1fr;
+            grid-template-areas: 
+                "header header"
+                "controls viewport";
+            height: 100vh;
+        }
+
+        #header {
+            grid-area: header;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 2px solid #4a90e2;
+        }
+
+        #header h1 {
+            font-size: 1.5em;
+            color: #4a90e2;
+        }
+
+        #connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #2ecc71;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        #controls {
+            grid-area: controls;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #4a90e2;
+        }
+
+        #viewport {
+            grid-area: viewport;
+            position: relative;
+            background: #1a1a1a;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(74, 144, 226, 0.3);
+        }
+
+        .control-section h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            border-bottom: 1px solid rgba(74, 144, 226, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .joint-control {
+            margin-bottom: 12px;
+        }
+
+        .joint-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #bdc3c7;
+        }
+
+        .joint-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #34495e;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .joint-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .joint-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .joint-value {
+            display: inline-block;
+            min-width: 60px;
+            text-align: right;
+            font-family: monospace;
+            color: #ecf0f1;
+            margin-left: 10px;
+        }
+
+        button {
+            background: linear-gradient(145deg, #4a90e2, #357abd);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin: 5px 5px 5px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #357abd, #2c5aa0);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .emergency-stop {
+            background: linear-gradient(145deg, #e74c3c, #c0392b) !important;
+            width: 100%;
+            font-weight: bold;
+            font-size: 1em;
+            padding: 15px;
+        }
+
+        .emergency-stop:hover {
+            background: linear-gradient(145deg, #c0392b, #a93226) !important;
+        }
+
+        #robot-info {
+            font-family: monospace;
+            font-size: 0.8em;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        #robot-info div {
+            margin: 3px 0;
+        }
+
+        .trajectory-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 3px solid #4a90e2;
+        }
+
+        .trajectory-item.playing {
+            border-left-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+        }
+
+        #messages {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            pointer-events: none;
+        }
+
+        .message {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4a90e2;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.error {
+            border-left-color: #e74c3c;
+        }
+
+        .message.success {
+            border-left-color: #2ecc71;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading overlay */
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4a90e2;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <h1>🦾 6-Axis Robot Arm Control</h1>
+            <div id="connection-status">
+                <div class="status-indicator" id="status-indicator"></div>
+                <span id="status-text">Disconnected</span>
+            </div>
+        </div>
+
+        <div id="controls">
+            <div class="control-section">
+                <h3>🎮 Joint Control</h3>
+                <div id="joint-controls">
+                    <!-- Joint sliders will be generated by JavaScript -->
+                </div>
+                <button id="reset-joints">Reset to Home</button>
+            </div>
+
+            <div class="control-section">
+                <h3>📊 Robot Status</h3>
+                <div id="robot-info">
+                    <div>Joints: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00]</div>
+                    <div>End Effector: [0.00, 0.00, 0.00]</div>
+                    <div>Torque: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00]</div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>📈 Trajectory Control</h3>
+                <button id="record-trajectory">Start Recording</button>
+                <button id="stop-recording" disabled>Stop Recording</button>
+                <div id="trajectory-list">
+                    <!-- Trajectory items will be populated here -->
+                </div>
+            </div>
+
+            <div class="control-section">
+                <button class="emergency-stop" id="emergency-stop">🛑 EMERGENCY STOP</button>
+            </div>
+        </div>
+
+        <div id="viewport">
+            <div id="loading">
+                <div class="loader"></div>
+            </div>
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Additional loaders for mesh files -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/ColladaLoader.js"></script>
+    <script src="robot-visualizer.js"></script>
+</body>
+</html>
