@@ -5,6 +5,9 @@ import random  # For simulating variations
 import json
 import queue
 from urdfpy import URDF
+import pyrender
+from PIL import Image
+import os
 
 # Create a single instance of the robot arm
 robot_model_file_path = "/home/pouri/workspace/Assignment_Sereact/urdfpy/tests/data/ur5/ur5.urdf"
@@ -37,24 +40,47 @@ def set_joint_angles(joint_angles):
 
 def calculate_and_display_fk(joint_angles):
     """
-    Calculates and displays the forward kinematics for the given joint angles.
+    Calculates and displays the forward kinematics for the given joint angles
+    and saves an offscreen rendering of the robot's pose.
 
     Args:
         joint_angles (dict): A dictionary of joint angles.
     """
-    # Calculate forward kinematics
-    cfg = {
-        'shoulder_pan_joint' : joint_angles['shoulder_pan_joint'],
-        'shoulder_lift_joint': joint_angles['shoulder_lift_joint'],
-        'elbow_joint': joint_angles['elbow_joint'],
-        'wrist_1_joint': joint_angles['wrist_1_joint'],
-        'wrist_2_joint': joint_angles['wrist_2_joint'],
-        'wrist_3_joint': joint_angles['wrist_3_joint'],
-    }
-    fk_results = robot_arm.link_fk(cfg=cfg)
+    # Calculate forward kinematics for all links
+    fk_results = robot_arm.link_fk(cfg=joint_angles)
+
     print("\nForward Kinematics (Cartesian Positions):")
-    for i in range(6):
-        print(fk_results[robot_arm.links[i]])
+    for link in robot_arm.links:
+        pose_matrix = fk_results.get(link)
+        if pose_matrix is not None:
+            # The position is in the last column of the 4x4 matrix
+            position = pose_matrix[:3, 3]
+            print(f"- {link.name}: (x={position[0]:.4f}, y={position[1]:.4f}, z={position[2]:.4f})")
+
+    # Offscreen rendering
+    try:
+        # Create a scene with the specified joint configuration
+        scene = pyrender.Scene.from_trimesh(robot_arm.visual_trimesh(cfg=joint_angles))
+
+        # Create an offscreen renderer
+        renderer = pyrender.OffscreenRenderer(viewport_width=640, viewport_height=480)
+        
+        # Render the scene
+        color, depth = renderer.render(scene)
+        
+        # Save the image
+        img = Image.fromarray(color)
+        image_path = os.path.join(os.path.dirname(__file__), 'robot_pose.png')
+        img.save(image_path)
+        
+        print(f"\nRobot visualization saved to: {image_path}")
+
+        # Clean up the renderer
+        renderer.delete()
+
+    except Exception as e:
+        print(f"\nCould not generate visualization. Error: {e}")
+        print("This might be due to a missing display environment. The forward kinematics data is still correct.")
 
 
 def get_joint_angles_from_user():
