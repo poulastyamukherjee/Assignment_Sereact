@@ -1,3 +1,0 @@
-[submodule "urdfpy"]
-	path = urdfpy
-	url = https://github.com/mmatl/urdfpy.git

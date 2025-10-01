@@ -10,7 +10,6 @@ services:
       - "${BACKEND_PORT:-5000}:5000"  # Flask API
       - "${WEBSOCKET_PORT:-8765}:8765"  # WebSocket server
     volumes:
-      - ./urdfpy:/app/urdfpy:ro  # Mount URDF files as read-only
       - ./robot_data:/app/robot_data:ro  # Mount robot data files as read-only
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
