@@ -304,6 +304,16 @@ class RobotVisualizer {
             'Wrist 3 Roll'
         ];
         
+        // Joint limits in degrees
+        const jointLimits = [
+            { min: -165, max: 165 },  // Joint 1
+            { min: -110, max: 110 },  // Joint 2
+            { min: -70, max: 110 },   // Joint 3
+            { min: -160, max: 160 },  // Joint 4
+            { min: -120, max: 120 },  // Joint 5
+            { min: 0, max: 360 }      // Joint 6
+        ];
+        
         for (let i = 0; i < 6; i++) {
             const controlDiv = document.createElement('div');
             controlDiv.className = 'joint-control';
@@ -314,8 +324,8 @@ class RobotVisualizer {
             const slider = document.createElement('input');
             slider.type = 'range';
             slider.className = 'joint-slider';
-            slider.min = '-180';
-            slider.max = '180';
+            slider.min = jointLimits[i].min.toString();
+            slider.max = jointLimits[i].max.toString();
             slider.value = '0';
             slider.step = '1';
             slider.id = `joint-${i}`;
@@ -504,7 +514,7 @@ class RobotVisualizer {
                     this.joints[jointIndex].rotation.z = -angle;
                     break;
                 case 5: // Wrist 3
-                    this.joints[jointIndex].rotation.x = angle;
+                    this.joints[jointIndex].rotation.y = angle;
                     break;
             }
         }
