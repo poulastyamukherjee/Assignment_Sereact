@@ -381,7 +381,22 @@ class RobotVisualizer {
     }
 
     setupWebSocket() {
-        const socketUrl = "ws://localhost:8766";
+        // Determine WebSocket URL based on current location
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        
+        // For Docker setup with nginx proxy, use /ws/ path
+        // For development, fall back to direct connection
+        let socketUrl;
+        if (host === 'localhost' || host.startsWith('127.0.0.1')) {
+            // Development mode - connect directly to WebSocket server
+            socketUrl = `${protocol}//${host.split(':')[0]}:8765`;
+        } else {
+            // Production/Docker mode - use nginx proxy
+            socketUrl = `${protocol}//${host}/ws/`;
+        }
+        
+        console.log(`Connecting to WebSocket: ${socketUrl}`);
         this.socket = new WebSocket(socketUrl);
 
         this.socket.onopen = () => {
@@ -490,7 +505,7 @@ class RobotVisualizer {
         this.setSliderStates(false);
         
         try {
-            const response = await fetch("http://localhost:5001/move", { 
+            const response = await fetch("/api/move", { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -700,7 +715,7 @@ class RobotVisualizer {
         this.setSliderStates(false);
         
         try {
-            const response = await fetch("http://localhost:5001/move_joint_smooth", {
+            const response = await fetch("/api/move_joint_smooth", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -750,7 +765,7 @@ class RobotVisualizer {
             const joints = this.getJointAngles();
             
             // Send to backend to calculate end effector pose
-            const response = await fetch("http://localhost:5001/set_joints", {
+            const response = await fetch("/api/set_joints", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

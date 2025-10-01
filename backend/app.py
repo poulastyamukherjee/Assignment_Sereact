@@ -14,13 +14,37 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Construct paths relative to the script's location
 FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'frontend'))
-URDF_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'urdfpy', 'tests', 'data'))
+
+# Handle both Docker and local development environments
+if os.path.exists('/app/robot_data'):
+    # Docker environment - use the mounted volume path
+    URDF_DIR = '/app/robot_data'
+else:
+    # Local development environment - use relative path
+    URDF_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'robot_data'))
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 
 # Enable CORS for all routes
 CORS(app, origins=["http://localhost:5001", "http://127.0.0.1:5001", "*"])
+
+# Debug: Print path information
+print(f"BASE_DIR: {BASE_DIR}")
+print(f"URDF_DIR: {URDF_DIR}")
+
 robot_model_file_path = os.path.join(URDF_DIR, 'ur5', 'ur5.urdf')
+print(f"Robot model file path: {robot_model_file_path}")
+print(f"File exists: {os.path.exists(robot_model_file_path)}")
+
+# List contents of URDF_DIR for debugging
+if os.path.exists(URDF_DIR):
+    print(f"Contents of {URDF_DIR}: {os.listdir(URDF_DIR)}")
+    ur5_dir = os.path.join(URDF_DIR, 'ur5')
+    if os.path.exists(ur5_dir):
+        print(f"Contents of {ur5_dir}: {os.listdir(ur5_dir)}")
+else:
+    print(f"URDF_DIR does not exist: {URDF_DIR}")
+
 robot_arm = URDF.load(robot_model_file_path)
 
 # Initialize the current position of the robot arm
@@ -484,6 +508,17 @@ def move_robot():
         "message": f"Movement sequence started with {movement_type} interpolation."
     })
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint for Docker containers.
+    """
+    return jsonify({
+        "status": "healthy",
+        "timestamp": time.time(),
+        "service": "robot-backend"
+    })
+
 if __name__ == '__main__':
     # Start the WebSocket server in a background thread
     websocket_thread = threading.Thread(target=run_websocket_server)
@@ -491,4 +526,4 @@ if __name__ == '__main__':
     websocket_thread.start()
     
     # Start the Flask app
-    app.run(debug=True, port=5001, use_reloader=False)
+    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)

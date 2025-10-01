@@ -82,8 +82,8 @@ async def main():
     """
     Starts the WebSocket server.
     """
-    host = "localhost"
-    port = 8766
+    host = "0.0.0.0"  # Bind to all interfaces for Docker
+    port = 8765
     print(f"Starting WebSocket server on ws://{host}:{port}")
     async with websockets.serve(register, host, port):
         await asyncio.Future()  # Run forever
