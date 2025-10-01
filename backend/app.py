@@ -2,6 +2,7 @@ import threading
 import time
 import json
 from flask import Flask, jsonify, send_from_directory
+from flask_cors import CORS
 from urdfpy import URDF
 import math
 import asyncio
@@ -17,7 +18,8 @@ URDF_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'urdfpy', 'tests', 'data
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 
-# Load the robot model
+# Enable CORS for all routes
+CORS(app, origins=["http://localhost:5001", "http://127.0.0.1:5001", "*"])
 robot_model_file_path = os.path.join(URDF_DIR, 'ur5', 'ur5.urdf')
 robot_arm = URDF.load(robot_model_file_path)
 
@@ -55,6 +57,95 @@ def generate_movement_sequence():
                 angle = amplitude * math.sin(2 * math.pi * i / num_steps)
                 joint_angles[joint.name] = angle
         sequence.append(joint_angles)
+    return sequence
+
+def trapezoidal_profile(start_pos, end_pos, total_time, accel_time, max_velocity=None):
+    """
+    Generate a trapezoidal velocity profile for smooth motion.
+    
+    Args:
+        start_pos: Starting position
+        end_pos: Ending position  
+        total_time: Total time for the movement
+        accel_time: Time spent accelerating/decelerating
+        max_velocity: Maximum velocity (calculated if None)
+    
+    Returns:
+        A function that takes time t and returns position
+    """
+    distance = end_pos - start_pos
+    
+    # Calculate max velocity if not provided
+    if max_velocity is None:
+        # For trapezoidal profile: distance = 0.5 * accel_time * max_vel + (total_time - 2*accel_time) * max_vel + 0.5 * accel_time * max_vel
+        # Simplifying: distance = max_vel * (total_time - accel_time)
+        max_velocity = distance / (total_time - accel_time) if (total_time - accel_time) > 0 else distance / total_time
+    
+    acceleration = max_velocity / accel_time if accel_time > 0 else 0
+    
+    def position_at_time(t):
+        if t <= 0:
+            return start_pos
+        elif t >= total_time:
+            return end_pos
+        elif t <= accel_time:
+            # Acceleration phase
+            return start_pos + 0.5 * acceleration * t * t
+        elif t <= (total_time - accel_time):
+            # Constant velocity phase
+            accel_distance = 0.5 * acceleration * accel_time * accel_time
+            const_distance = max_velocity * (t - accel_time)
+            return start_pos + accel_distance + const_distance
+        else:
+            # Deceleration phase
+            decel_start_time = total_time - accel_time
+            time_in_decel = t - decel_start_time
+            
+            accel_distance = 0.5 * acceleration * accel_time * accel_time
+            const_distance = max_velocity * (decel_start_time - accel_time)
+            decel_distance = max_velocity * time_in_decel - 0.5 * acceleration * time_in_decel * time_in_decel
+            
+            return start_pos + accel_distance + const_distance + decel_distance
+    
+    return position_at_time
+
+def generate_trapezoidal_movement_sequence():
+    """
+    Generates a smooth trapezoidal movement sequence for the robot arm.
+    Each joint moves from 0 to a target position and back using trapezoidal interpolation.
+    """
+    sequence = []
+    total_time = 10.0  # Total time for movement in seconds
+    accel_time = 2.0   # Time for acceleration/deceleration
+    time_step = 0.1    # Time step for discretization
+    num_steps = int(total_time / time_step)
+    
+    # Define target positions for each joint (in radians)
+    target_positions = {
+        'shoulder_pan_joint': math.pi / 3,      # 60 degrees
+        'shoulder_lift_joint': -math.pi / 6,    # -30 degrees  
+        'elbow_joint': math.pi / 2,             # 90 degrees
+        'wrist_1_joint': -math.pi / 4,          # -45 degrees
+        'wrist_2_joint': math.pi / 6,           # 30 degrees
+        'wrist_3_joint': math.pi / 4            # 45 degrees
+    }
+    
+    # Create trapezoidal profiles for each joint
+    joint_profiles = {}
+    for joint in robot_arm.joints:
+        if joint.joint_type != 'fixed':
+            start_pos = 0.0
+            end_pos = target_positions.get(joint.name, 0.0)
+            joint_profiles[joint.name] = trapezoidal_profile(start_pos, end_pos, total_time, accel_time)
+    
+    # Generate the sequence
+    for i in range(num_steps):
+        t = i * time_step
+        joint_angles = {}
+        for joint_name, profile_func in joint_profiles.items():
+            joint_angles[joint_name] = profile_func(t)
+        sequence.append(joint_angles)
+    
     return sequence
 
 def execute_movement_sequence(sequence):
@@ -99,15 +190,26 @@ def move_robot():
     """
     API endpoint to start the robot's movement sequence.
     """
+    from flask import request
+    
+    # Get movement type from request (default to sinusoidal)
+    data = request.get_json() if request.is_json else {}
+    movement_type = data.get('movement_type', 'sinusoidal')
+    
     def movement_task():
-        sequence = generate_movement_sequence()
+        if movement_type == 'trapezoidal':
+            sequence = generate_trapezoidal_movement_sequence()
+        else:
+            sequence = generate_movement_sequence()
         execute_movement_sequence(sequence)
 
     # Run the movement in a background thread to not block the API response
     thread = threading.Thread(target=movement_task)
     thread.start()
 
-    return jsonify({"message": "Movement sequence started."})
+    return jsonify({
+        "message": f"Movement sequence started with {movement_type} interpolation."
+    })
 
 if __name__ == '__main__':
     # Start the WebSocket server in a background thread

@@ -392,9 +392,18 @@ class RobotVisualizer {
     }
     
     async triggerMovement() {
-        this.showMessage("Requesting robot movement...", "info");
+        const movementType = document.getElementById('movement-type').value;
+        this.showMessage(`Requesting robot movement (${movementType})...`, "info");
         try {
-            const response = await fetch("http://localhost:5001/move", { method: 'POST' });
+            const response = await fetch("http://localhost:5001/move", { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    movement_type: movementType
+                })
+            });
             if (response.ok) {
                 const result = await response.json();
                 this.showMessage(result.message, "success");
@@ -414,13 +423,8 @@ class RobotVisualizer {
             this.resetJoints();
         });
 
-        // Add demo button
-        const demoButton = document.createElement('button');
-        demoButton.textContent = 'Start Movement';
-        demoButton.id = 'start-movement';
-        document.getElementById('joint-controls').appendChild(demoButton);
-        
-        demoButton.addEventListener('click', () => {
+        // Movement control button
+        document.getElementById('start-movement').addEventListener('click', () => {
             this.triggerMovement();
         });
         
