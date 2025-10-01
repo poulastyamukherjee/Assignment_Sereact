@@ -7,7 +7,7 @@ from urdfpy import URDF
 import math
 import asyncio
 import os
-from app_websocket import send_to_all, run_server as run_websocket_server
+from app_websocket import send_to_all, run_server as run_websocket_server, has_connected_clients
 
 # Get the absolute path of the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,15 +30,18 @@ def send_to_websocket(data):
     """
     Sends data to all connected WebSocket clients.
     """
-    # Since the WebSocket server runs in a different event loop,
-    # we need to run the async send_to_all function in a new event loop.
+    # Only try to send if there are connected clients
+    if not has_connected_clients():
+        return
+        
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(send_to_all(data))
         loop.close()
     except Exception as e:
-        print(f"Error sending to WebSocket: {e}")
+        # Silently handle WebSocket errors to not spam the console
+        pass
 
 def generate_movement_sequence():
     """
@@ -148,14 +151,125 @@ def generate_trapezoidal_movement_sequence():
     
     return sequence
 
+def calculate_end_effector_pose(joint_angles):
+    """
+    Calculate end effector position and orientation from joint angles.
+    """
+    try:
+        # Calculate forward kinematics
+        fk_results = robot_arm.link_fk(cfg=joint_angles)
+        
+        # Extract end effector pose (assuming the last link is the end effector)
+        end_effector_pose = None
+        
+        # Find the end effector link (typically the last link in the chain)
+        for link, pose in fk_results.items():
+            if 'wrist_3_link' in link.name or 'tool0' in link.name or 'ee_link' in link.name:
+                end_effector_pose = pose
+                break
+        
+        # If no specific end effector link found, use the last link
+        if end_effector_pose is None and fk_results:
+            end_effector_pose = list(fk_results.values())[-1]
+        
+        # Extract position and orientation from the pose matrix
+        end_effector_position = [0, 0, 0]
+        end_effector_orientation = [0, 0, 0]
+        
+        if end_effector_pose is not None:
+            # Position is the translation part (last column, first 3 rows)
+            end_effector_position = [
+                float(end_effector_pose[0, 3]),
+                float(end_effector_pose[1, 3]), 
+                float(end_effector_pose[2, 3])
+            ]
+            
+            # Convert rotation matrix to Euler angles (simplified)
+            import numpy as np
+            # Extract rotation matrix
+            R = end_effector_pose[:3, :3]
+            
+            # Convert to Euler angles (ZYX convention)
+            sy = np.sqrt(R[0,0] * R[0,0] + R[1,0] * R[1,0])
+            singular = sy < 1e-6
+            
+            if not singular:
+                x = np.arctan2(R[2,1], R[2,2])
+                y = np.arctan2(-R[2,0], sy)
+                z = np.arctan2(R[1,0], R[0,0])
+            else:
+                x = np.arctan2(-R[1,2], R[1,1])
+                y = np.arctan2(-R[2,0], sy)
+                z = 0
+                
+            end_effector_orientation = [float(x), float(y), float(z)]
+        
+        return {
+            'position': end_effector_position,
+            'orientation': end_effector_orientation
+        }
+    except Exception as e:
+        print(f"Error calculating end effector pose: {e}")
+        return {
+            'position': [0, 0, 0],
+            'orientation': [0, 0, 0]
+        }
+
 def execute_movement_sequence(sequence):
     """
     Executes the generated movement sequence.
     """
     for joint_angles in sequence:
         set_joint_angles(joint_angles)
-        # In a real scenario, you'd also calculate FK and send to frontend
+        # Calculate forward kinematics
         fk_results = robot_arm.link_fk(cfg=joint_angles)
+        
+        # Extract end effector pose (assuming the last link is the end effector)
+        end_effector_link = None
+        end_effector_pose = None
+        
+        # Find the end effector link (typically the last link in the chain)
+        for link, pose in fk_results.items():
+            if 'wrist_3_link' in link.name or 'tool0' in link.name or 'ee_link' in link.name:
+                end_effector_link = link
+                end_effector_pose = pose
+                break
+        
+        # If no specific end effector link found, use the last link
+        if end_effector_pose is None and fk_results:
+            end_effector_link, end_effector_pose = list(fk_results.items())[-1]
+        
+        # Extract position and orientation from the pose matrix
+        end_effector_position = [0, 0, 0]
+        end_effector_orientation = [0, 0, 0]
+        
+        if end_effector_pose is not None:
+            # Position is the translation part (last column, first 3 rows)
+            end_effector_position = [
+                float(end_effector_pose[0, 3]),
+                float(end_effector_pose[1, 3]), 
+                float(end_effector_pose[2, 3])
+            ]
+            
+            # Convert rotation matrix to Euler angles (simplified)
+            import numpy as np
+            # Extract rotation matrix
+            R = end_effector_pose[:3, :3]
+            
+            # Convert to Euler angles (ZYX convention)
+            sy = np.sqrt(R[0,0] * R[0,0] + R[1,0] * R[1,0])
+            singular = sy < 1e-6
+            
+            if not singular:
+                x = np.arctan2(R[2,1], R[2,2])
+                y = np.arctan2(-R[2,0], sy)
+                z = np.arctan2(R[1,0], R[0,0])
+            else:
+                x = np.arctan2(-R[1,2], R[1,1])
+                y = np.arctan2(-R[2,0], sy)
+                z = 0
+                
+            end_effector_orientation = [float(x), float(y), float(z)]
         
         # Prepare data for the frontend
         # Convert numpy arrays to lists for JSON serialization
@@ -163,6 +277,10 @@ def execute_movement_sequence(sequence):
         
         frontend_data = {
             'joint_angles': joint_angles,
+            'end_effector': {
+                'position': end_effector_position,
+                'orientation': end_effector_orientation
+            },
             'fk': fk_data
         }
         
@@ -184,6 +302,68 @@ def index():
 @app.route('/urdf/<path:filename>')
 def serve_urdf(filename):
     return send_from_directory(os.path.join(URDF_DIR, 'ur5'), filename)
+
+@app.route('/set_joints', methods=['POST'])
+def set_joints_endpoint():
+    """
+    API endpoint to set joint angles manually.
+    """
+    global current_joint_angles
+    from flask import request
+    
+    data = request.get_json()
+    if not data or 'joints' not in data:
+        return jsonify({"error": "Invalid request data"}), 400
+    
+    joints = data['joints']
+    if len(joints) != 6:
+        return jsonify({"error": "Expected 6 joint angles"}), 400
+    
+    # Map joint angles to joint names
+    joint_names = [
+        'shoulder_pan_joint',
+        'shoulder_lift_joint', 
+        'elbow_joint',
+        'wrist_1_joint',
+        'wrist_2_joint',
+        'wrist_3_joint'
+    ]
+    
+    joint_angles = {}
+    for i, angle in enumerate(joints):
+        joint_angles[joint_names[i]] = float(angle)
+    
+    # Update current joint angles
+    set_joint_angles(joint_angles)
+    
+    # Calculate end effector pose
+    end_effector = calculate_end_effector_pose(current_joint_angles)
+    
+    robot_state = {
+        'joint_angles': current_joint_angles,
+        'end_effector': end_effector,
+        'timestamp': time.time()
+    }
+    
+    return jsonify(robot_state)
+
+@app.route('/robot_state', methods=['GET'])
+def get_robot_state():
+    """
+    API endpoint to get the current robot state including end effector pose.
+    """
+    global current_joint_angles
+    
+    # Calculate end effector pose
+    end_effector = calculate_end_effector_pose(current_joint_angles)
+    
+    robot_state = {
+        'joint_angles': current_joint_angles,
+        'end_effector': end_effector,
+        'timestamp': time.time()
+    }
+    
+    return jsonify(robot_state)
 
 @app.route('/move', methods=['POST'])
 def move_robot():

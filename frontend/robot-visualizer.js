@@ -345,6 +345,9 @@ class RobotVisualizer {
                     const joints = this.getJointAngles();
                     this.socket.emit('set_joints', { joints });
                 }
+                
+                // Update end effector information
+                this.updateEndEffectorDisplay();
             });
             
             controlDiv.appendChild(label);
@@ -584,19 +587,55 @@ class RobotVisualizer {
         }
     }
 
+    async updateEndEffectorDisplay() {
+        try {
+            // Get current joint angles from sliders
+            const joints = this.getJointAngles();
+            
+            // Send to backend to calculate end effector pose
+            const response = await fetch("http://localhost:5001/set_joints", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ joints })
+            });
+            
+            if (response.ok) {
+                const robotState = await response.json();
+                this.updateRobotDisplay(robotState);
+            }
+        } catch (error) {
+            console.error("Failed to update end effector:", error);
+        }
+    }
+
     updateRobotDisplay(robotState) {
         if (!robotState.joint_angles) return;
         const robotInfo = document.getElementById('robot-info');
         
         const jointsStr = Object.values(robotState.joint_angles).map(j => (j * 180 / Math.PI).toFixed(1)).join('°, ');
         
-        // For now, we don't have this data from the backend
-        const endEffectorStr = "N/A"; 
+        // Extract end effector information if available
+        let endEffectorStr = "N/A";
+        if (robotState.end_effector) {
+            const pos = robotState.end_effector.position;
+            const ori = robotState.end_effector.orientation;
+            
+            if (pos && pos.length >= 3) {
+                const posStr = `[${pos[0].toFixed(3)}, ${pos[1].toFixed(3)}, ${pos[2].toFixed(3)}]`;
+                const oriStr = ori && ori.length >= 3 ? 
+                    `[${(ori[0] * 180 / Math.PI).toFixed(1)}°, ${(ori[1] * 180 / Math.PI).toFixed(1)}°, ${(ori[2] * 180 / Math.PI).toFixed(1)}°]` : 
+                    "[0.0°, 0.0°, 0.0°]";
+                endEffectorStr = `Pos: ${posStr}, Ori: ${oriStr}`;
+            }
+        }
+        
         const torqueStr = "N/A";
         
         robotInfo.innerHTML = `
             <div>Joints: [${jointsStr}°]</div>
-            <div>End Effector: [${endEffectorStr}]</div>
+            <div>End Effector: ${endEffectorStr}</div>
             <div>Torque: [${torqueStr}]</div>
             <div>Timestamp: ${new Date().toLocaleTimeString()}</div>
         `;
