@@ -10,10 +10,12 @@ class RobotVisualizer {
         this.currentRobotState = {
             joints: [0, 0, 0, 0, 0, 0],
             end_effector: { position: [0, 0, 0], orientation: [0, 0, 0] },
-            sensors: { torque: [0, 0, 0, 0, 0, 0] }
         };
         this.trajectories = {};
         this.isConnected = false;
+        this.isMoving = false;  // Track if robot is currently moving
+        this.movingJoint = -1;  // Track which joint is currently moving
+        this.pendingSliderUpdate = null;  // Store pending slider update
         
         this.init();
     }
@@ -336,18 +338,39 @@ class RobotVisualizer {
             valueSpan.id = `joint-value-${i}`;
             
             slider.addEventListener('input', (e) => {
-                const value = parseFloat(e.target.value);
-                valueSpan.textContent = `${value.toFixed(1)}°`;
-                this.updateJointPosition(i, value * Math.PI / 180);
-                
-                // Send command to robot via WebSocket
-                if (this.isConnected) {
-                    const joints = this.getJointAngles();
-                    this.socket.emit('set_joints', { joints });
+                // Prevent input if robot is currently moving
+                if (this.isMoving) {
+                    e.preventDefault();
+                    return;
                 }
                 
-                // Update end effector information
-                this.updateEndEffectorDisplay();
+                const value = parseFloat(e.target.value);
+                const radians = value * Math.PI / 180;
+                
+                // Store pending update for when movement completes
+                this.pendingSliderUpdate = {
+                    jointIndex: i,
+                    value: value,
+                    radians: radians
+                };
+                
+                // Clear any existing timeout
+                if (this.sliderTimeout) {
+                    clearTimeout(this.sliderTimeout);
+                }
+                
+                // Set a small delay to avoid too many rapid movements
+                this.sliderTimeout = setTimeout(() => {
+                    this.triggerSmoothJointMovement(i, radians, value);
+                }, 150);
+            });
+            
+            // Add mousedown event to disable during movement
+            slider.addEventListener('mousedown', (e) => {
+                if (this.isMoving) {
+                    e.preventDefault();
+                    this.showMessage(`Joint ${this.movingJoint + 1} is currently moving. Please wait...`, 'warning');
+                }
             });
             
             controlDiv.appendChild(label);
@@ -372,6 +395,18 @@ class RobotVisualizer {
             try {
                 const data = JSON.parse(event.data);
                 // console.log("Received data:", data);
+                
+                // Handle movement completion
+                if (data.movement_complete) {
+                    this.handleMovementComplete(data);
+                    return;
+                }
+                
+                // Handle movement progress updates
+                if (data.movement_progress) {
+                    this.handleMovementProgress(data);
+                }
+                
                 this.updateRobotVisualization(data);
                 this.updateRobotDisplay(data);
             } catch (e) {
@@ -394,9 +429,66 @@ class RobotVisualizer {
         };
     }
     
+    handleMovementProgress(data) {
+        const progress = data.movement_progress;
+        if (progress && progress.is_moving) {
+            // Update progress indicator if needed
+            const progressPercent = ((progress.current_step / progress.total_steps) * 100).toFixed(1);
+            // You could show progress in UI here if desired
+        }
+    }
+    
+    handleMovementComplete(data) {
+        const jointIndex = data.joint_index;
+        this.showMessage(`Joint ${jointIndex + 1} movement completed.`, "success");
+        
+        // Reset movement state
+        this.resetMovementState();
+        
+        // Update the slider display to match final position
+        if (data.joint_angles) {
+            this.updateSliderDisplayFromState(data.joint_angles);
+        }
+    }
+    
+    updateSliderDisplayFromState(jointAngles) {
+        const jointNames = [
+            'shoulder_pan_joint',
+            'shoulder_lift_joint',
+            'elbow_joint', 
+            'wrist_1_joint',
+            'wrist_2_joint',
+            'wrist_3_joint'
+        ];
+        
+        jointNames.forEach((name, index) => {
+            if (jointAngles[name] !== undefined) {
+                const degrees = jointAngles[name] * 180 / Math.PI;
+                const slider = document.getElementById(`joint-${index}`);
+                const valueSpan = document.getElementById(`joint-value-${index}`);
+                
+                if (slider && valueSpan) {
+                    slider.value = degrees.toFixed(1);
+                    valueSpan.textContent = `${degrees.toFixed(1)}°`;
+                }
+            }
+        });
+    }
+
     async triggerMovement() {
+        if (this.isMoving) {
+            this.showMessage("Robot is currently moving. Please wait...", "warning");
+            return;
+        }
+        
         const movementType = document.getElementById('movement-type').value;
         this.showMessage(`Requesting robot movement (${movementType})...`, "info");
+        
+        // Set movement state for automated sequences
+        this.isMoving = true;
+        this.movingJoint = -1; // -1 indicates automated sequence
+        this.setSliderStates(false);
+        
         try {
             const response = await fetch("http://localhost:5001/move", { 
                 method: 'POST',
@@ -410,12 +502,20 @@ class RobotVisualizer {
             if (response.ok) {
                 const result = await response.json();
                 this.showMessage(result.message, "success");
+                
+                // For automated sequences, we'll reset after a delay since they don't send completion messages
+                setTimeout(() => {
+                    this.resetMovementState();
+                    this.showMessage("Automated movement sequence completed.", "success");
+                }, 10000); // 10 seconds for the movement sequence
             } else {
                 this.showMessage(`Error: ${response.statusText}`, "error");
+                this.resetMovementState();
             }
         } catch (error) {
             console.error("Failed to trigger movement:", error);
             this.showMessage("Failed to connect to the server to trigger movement.", "error");
+            this.resetMovementState();
         }
     }
 
@@ -587,6 +687,63 @@ class RobotVisualizer {
         }
     }
 
+    async triggerSmoothJointMovement(jointIndex, targetAngle, targetDegrees) {
+        if (this.isMoving) {
+            this.showMessage("Robot is already moving. Please wait...", "warning");
+            return;
+        }
+        
+        this.isMoving = true;
+        this.movingJoint = jointIndex;
+        
+        // Disable all sliders
+        this.setSliderStates(false);
+        
+        try {
+            const response = await fetch("http://localhost:5001/move_joint_smooth", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    joint_index: jointIndex,
+                    target_angle: targetAngle,
+                    movement_time: 1.0,
+                    accel_time: 0.3
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                this.showMessage(`Moving Joint ${jointIndex + 1} to ${targetDegrees.toFixed(1)}°...`, "info");
+            } else {
+                this.showMessage(`Error: ${response.statusText}`, "error");
+                this.resetMovementState();
+            }
+        } catch (error) {
+            console.error("Failed to trigger smooth movement:", error);
+            this.showMessage("Failed to connect to server for smooth movement.", "error");
+            this.resetMovementState();
+        }
+    }
+    
+    setSliderStates(enabled) {
+        for (let i = 0; i < 6; i++) {
+            const slider = document.getElementById(`joint-${i}`);
+            if (slider) {
+                slider.disabled = !enabled;
+                slider.style.opacity = enabled ? '1' : '0.5';
+                slider.style.cursor = enabled ? 'pointer' : 'not-allowed';
+            }
+        }
+    }
+    
+    resetMovementState() {
+        this.isMoving = false;
+        this.movingJoint = -1;
+        this.setSliderStates(true);
+    }
+
     async updateEndEffectorDisplay() {
         try {
             // Get current joint angles from sliders
@@ -631,12 +788,9 @@ class RobotVisualizer {
             }
         }
         
-        const torqueStr = "N/A";
-        
         robotInfo.innerHTML = `
             <div>Joints: [${jointsStr}°]</div>
             <div>End Effector: ${endEffectorStr}</div>
-            <div>Torque: [${torqueStr}]</div>
             <div>Timestamp: ${new Date().toLocaleTimeString()}</div>
         `;
     }
@@ -655,6 +809,11 @@ class RobotVisualizer {
     }
 
     resetJoints() {
+        if (this.isMoving) {
+            this.showMessage("Cannot reset joints while robot is moving. Please wait...", "warning");
+            return;
+        }
+        
         for (let i = 0; i < 6; i++) {
             const slider = document.getElementById(`joint-${i}`);
             const valueSpan = document.getElementById(`joint-value-${i}`);

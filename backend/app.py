@@ -303,6 +303,99 @@ def index():
 def serve_urdf(filename):
     return send_from_directory(os.path.join(URDF_DIR, 'ur5'), filename)
 
+@app.route('/move_joint_smooth', methods=['POST'])
+def move_joint_smooth():
+    """
+    API endpoint to smoothly move a single joint using trapezoidal interpolation.
+    """
+    global current_joint_angles
+    from flask import request
+    
+    data = request.get_json()
+    if not data or 'joint_index' not in data or 'target_angle' not in data:
+        return jsonify({"error": "Invalid request data. Need joint_index and target_angle"}), 400
+    
+    joint_index = data['joint_index']
+    target_angle = float(data['target_angle'])
+    movement_time = data.get('movement_time', 1.0)  # Default 1 second
+    accel_time = data.get('accel_time', 0.3)  # Default 0.3 seconds
+    
+    if joint_index < 0 or joint_index >= 6:
+        return jsonify({"error": "Invalid joint index. Must be 0-5"}), 400
+    
+    # Map joint index to joint name
+    joint_names = [
+        'shoulder_pan_joint',
+        'shoulder_lift_joint', 
+        'elbow_joint',
+        'wrist_1_joint',
+        'wrist_2_joint',
+        'wrist_3_joint'
+    ]
+    
+    joint_name = joint_names[joint_index]
+    start_angle = current_joint_angles.get(joint_name, 0.0)
+    
+    def smooth_movement_task():
+        # Create trapezoidal profile for this joint
+        profile = trapezoidal_profile(start_angle, target_angle, movement_time, accel_time)
+        
+        # Generate movement sequence
+        time_step = 0.05  # 20 Hz update rate
+        num_steps = int(movement_time / time_step)
+        
+        for i in range(num_steps + 1):
+            t = i * time_step
+            if t > movement_time:
+                t = movement_time
+                
+            # Calculate new angle for this joint
+            new_angle = profile(t)
+            
+            # Update only this joint while keeping others at current positions
+            new_joint_angles = current_joint_angles.copy()
+            new_joint_angles[joint_name] = new_angle
+            
+            # Update current state
+            set_joint_angles(new_joint_angles)
+            
+            # Calculate end effector pose
+            end_effector = calculate_end_effector_pose(current_joint_angles)
+            
+            # Prepare data for frontend
+            frontend_data = {
+                'joint_angles': current_joint_angles,
+                'end_effector': end_effector,
+                'movement_progress': {
+                    'joint_index': joint_index,
+                    'current_step': i,
+                    'total_steps': num_steps,
+                    'is_moving': i < num_steps
+                }
+            }
+            
+            send_to_websocket(json.dumps(frontend_data))
+            time.sleep(time_step)
+        
+        # Send final completion message
+        final_data = {
+            'joint_angles': current_joint_angles,
+            'end_effector': calculate_end_effector_pose(current_joint_angles),
+            'movement_complete': True,
+            'joint_index': joint_index
+        }
+        send_to_websocket(json.dumps(final_data))
+    
+    # Run the movement in a background thread
+    thread = threading.Thread(target=smooth_movement_task)
+    thread.start()
+    
+    return jsonify({
+        "message": f"Smooth movement started for joint {joint_index} to {target_angle:.3f} radians",
+        "movement_time": movement_time,
+        "joint_name": joint_name
+    })
+
 @app.route('/set_joints', methods=['POST'])
 def set_joints_endpoint():
     """
