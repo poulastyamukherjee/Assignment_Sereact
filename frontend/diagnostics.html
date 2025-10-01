@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Connection Diagnostics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+        }
+        h1 { color: #333; }
+        .test-result {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .status {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .online { background: #28a745; color: white; }
+        .offline { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Robot Connection Diagnostics</h1>
+        
+        <div id="status">
+            <h3>Connection Status</h3>
+            <p>Frontend Server: <span id="frontend-status" class="status offline">Checking...</span></p>
+            <p>Backend API: <span id="backend-status" class="status offline">Checking...</span></p>
+            <p>SSE Stream: <span id="sse-status" class="status offline">Checking...</span></p>
+        </div>
+        
+        <h3>Quick Tests</h3>
+        <button onclick="testBackend()">Test Backend API</button>
+        <button onclick="testSSE()">Test SSE Stream</button>
+        <button onclick="testJointControl()">Test Joint Control</button>
+        <button onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+        
+        <div id="results">
+            <h3>Test Results</h3>
+            <p>Click a test button to run diagnostics...</p>
+        </div>
+        
+        <h3>Server URLs to Try</h3>
+        <ul>
+            <li><a href="http://localhost:5000/api/joint_states" target="_blank">http://localhost:5000/api/joint_states</a></li>
+            <li><a href="http://127.0.0.1:5000/api/joint_states" target="_blank">http://127.0.0.1:5000/api/joint_states</a></li>
+            <li><a href="http://localhost:8080" target="_blank">Frontend: http://localhost:8080</a></li>
+            <li><a href="http://localhost:5000/api/events" target="_blank">SSE Stream: http://localhost:5000/api/events</a></li>
+        </ul>
+        
+        <h3>Troubleshooting Steps</h3>
+        <ol>
+            <li><strong>Check Backend Server:</strong> Make sure Flask is running with <code>python3 app.py</code></li>
+            <li><strong>Check Frontend Server:</strong> Make sure HTTP server is running with <code>python3 -m http.server 8080</code></li>
+            <li><strong>Check Ports:</strong> Verify no other processes are using ports 5000 or 8080</li>
+            <li><strong>Browser Console:</strong> Check browser developer console for error messages</li>
+            <li><strong>CORS Issues:</strong> The Flask server includes CORS headers, but check browser restrictions</li>
+        </ol>
+    </div>
+
+    <script>
+        let results = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            results.innerHTML = '<h3>Test Results</h3>';
+        }
+        
+        async function testBackend() {
+            clearResults();
+            addResult('Testing backend API connection...', 'warning');
+            
+            const urls = [
+                'http://localhost:5000/api/joint_states',
+                'http://127.0.0.1:5000/api/joint_states',
+                'http://0.0.0.0:5000/api/joint_states'
+            ];
+            
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const data = await response.json();
+                        addResult(`✅ Backend API working: ${url}`, 'success');
+                        addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                        document.getElementById('backend-status').className = 'status online';
+                        document.getElementById('backend-status').textContent = 'Online';
+                        return;
+                    } else {
+                        addResult(`❌ HTTP Error ${response.status}: ${url}`, 'error');
+                    }
+                } catch (error) {
+                    addResult(`❌ Connection failed to ${url}: ${error.message}`, 'error');
+                }
+            }
+            
+            document.getElementById('backend-status').className = 'status offline';
+            document.getElementById('backend-status').textContent = 'Offline';
+            addResult('❌ All backend API tests failed. Is Flask server running?', 'error');
+        }
+        
+        async function testSSE() {
+            clearResults();
+            addResult('Testing Server-Sent Events...', 'warning');
+            
+            const eventSource = new EventSource('http://localhost:5000/api/events');
+            let messageReceived = false;
+            
+            eventSource.onopen = () => {
+                addResult('✅ SSE connection opened successfully', 'success');
+                document.getElementById('sse-status').className = 'status online';
+                document.getElementById('sse-status').textContent = 'Online';
+            };
+            
+            eventSource.onmessage = (event) => {
+                if (!messageReceived) {
+                    messageReceived = true;
+                    addResult('✅ SSE data received successfully', 'success');
+                    addResult(`<pre>${event.data}</pre>`, 'success');
+                    eventSource.close();
+                }
+            };
+            
+            eventSource.onerror = (error) => {
+                addResult('❌ SSE connection error', 'error');
+                document.getElementById('sse-status').className = 'status offline';
+                document.getElementById('sse-status').textContent = 'Offline';
+                eventSource.close();
+            };
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                if (!messageReceived) {
+                    addResult('⏱️ SSE test timeout - no data received in 5 seconds', 'warning');
+                    eventSource.close();
+                }
+            }, 5000);
+        }
+        
+        async function testJointControl() {
+            clearResults();
+            addResult('Testing joint control API...', 'warning');
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/set_joints', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        joints: [0.1, -0.1, 0.2, -0.2, 0.1, -0.1]
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ Joint control API working', 'success');
+                    addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                } else {
+                    addResult(`❌ Joint control failed: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Joint control error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runFullDiagnostic() {
+            clearResults();
+            addResult('🔍 Running full diagnostic...', 'warning');
+            
+            await testBackend();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testSSE();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testJointControl();
+            
+            addResult('📊 Full diagnostic complete', 'success');
+        }
+        
+        // Auto-run basic tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                testBackend();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
