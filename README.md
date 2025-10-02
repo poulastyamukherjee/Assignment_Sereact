@@ -1,6 +1,8 @@
 # 6-Axis Robot Arm Control & Visualization Application
 
 A comprehensive web-based application for controlling and visualizing a 6-axis robot arm with real-time kinematics, smooth motion planning, and WebSocket communication.
+<img width="1875" height="847" alt="image" src="https://github.com/user-attachments/assets/6254b151-9ba7-4c9a-abde-e8272b72581d" />
+
 
 ## Table of Contents
 
@@ -9,12 +11,9 @@ A comprehensive web-based application for controlling and visualizing a 6-axis r
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Development](#development)
 - [Testing](#testing)
 - [Docker Setup](#docker-setup)
-- [API Documentation](#api-documentation)
 - [Project Structure](#project-structure)
-- [Contributing](#contributing)
 
 ## Overview
 
@@ -24,37 +23,57 @@ This application provides a complete solution for robot arm control featuring:
 - **Forward kinematics** calculations with end-effector pose tracking
 - **Smooth motion planning** with trapezoidal velocity profiles
 - **WebSocket communication** for real-time updates
-- **RESTful API** for robot control and state management
 - **Comprehensive test suite** with pytest framework
 - **Containerized deployment** with Docker
 
+## TLDR
+
+Running the application
+
+### 1. Install Docker and Docker Compose
+- [Docker Installation](#1-install-docker-and-docker-compose)
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/poulastyamukherjee/Assignment_Sereact.git
+cd Assignment_Sereact
+```
+
+### 3. Start the Application
+```bash
+# Make the script executable
+chmod +x docker-build.sh
+
+# Build and start all services
+./docker-build.sh up
+```
 ## Architecture
 
 ### System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Robot Arm Control System                  │
+│                    Robot Arm Control System                 │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
-│  │  Frontend   │    │   Backend   │    │   Robot     │     │
-│  │             │    │             │    │   Model     │     │
-│  │ • HTML/CSS  │◄──►│ • Flask API │◄──►│ • URDF      │     │
-│  │ • JavaScript│    │ • WebSocket │    │ • Kinematics│     │
-│  │ • 3D Render │    │ • Threading │    │ • Joints    │     │
-│  └─────────────┘    └─────────────┘    └─────────────┘     │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
+│  │  Frontend   │    │   Backend   │    │   Robot     │      │
+│  │             │    │             │    │   Model     │      │
+│  │ • HTML/CSS  │◄──►│ • Flask API │◄──►│ • URDF      │      │
+│  │ • JavaScript│    │ • WebSocket │    │ • Kinematics│      │
+│  │ • 3D Render │    │ • Threading │    │ • Joints    │      │
+│  └─────────────┘    └─────────────┘    └─────────────┘      │
 │         │                    │                    │         │
 │         └────────────────────┼────────────────────┘         │
 │                              │                              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                Docker Network                       │   │
-│  │                                                     │   │
-│  │  ┌─────────────┐         ┌─────────────────────┐   │   │
-│  │  │   Nginx     │         │      Python         │   │   │
-│  │  │   (Port 80) │◄───────►│   (Ports 5000,8765) │   │   │
-│  │  └─────────────┘         └─────────────────────┘   │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                Docker Network                       │    │
+│  │                                                     │    │
+│  │  ┌─────────────┐         ┌─────────────────────┐    │    │
+│  │  │   Nginx     │         │      Python         │    │    │
+│  │  │   (Port 80) │◄───────►│   (Ports 5000,8765) │    │    │
+│  │  └─────────────┘         └─────────────────────┘    │    │
+│  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,12 +90,10 @@ This application provides a complete solution for robot arm control featuring:
 - **WebSocket server** for real-time communication
 - **URDF parser** for robot model loading
 - **Forward kinematics** engine
-- **Motion planning** algorithms
 
 #### Robot Model
 - **URDF representation** of UR5 robot arm
 - **6 degrees of freedom** (shoulder, elbow, wrist joints)
-- **Collision and visual meshes**
 - **Joint limits and constraints**
 
 ## Features
@@ -87,13 +104,6 @@ This application provides a complete solution for robot arm control featuring:
 - **Smooth motion planning** using trapezoidal velocity profiles
 - **WebSocket communication** for live updates
 - **Automatic state synchronization** between frontend and backend
-
-### Advanced Features
-- **Comprehensive testing** with 40+ test cases
-- **Docker containerization** for easy deployment
-- **Health monitoring** and status checks
-- **Development mode** with hot reloading
-- **Detailed logging** and error handling
 
 ### Movement Types
 - **Sinusoidal movement** - Smooth oscillating motion
@@ -171,14 +181,6 @@ chmod +x docker-build.sh
 ./docker-build.sh down
 ```
 
-## Development
-
-### Development Mode
-For development with hot reloading:
-```bash
-./docker-build.sh up-dev
-```
-
 ### Local Development Setup
 ```bash
 # Navigate to backend
@@ -205,9 +207,6 @@ The `docker-build.sh` script provides various commands for managing the applicat
 
 # Start services (production)
 ./docker-build.sh up
-
-# Start services (development with hot reload)
-./docker-build.sh up-dev
 
 # Stop all services
 ./docker-build.sh down
@@ -288,38 +287,6 @@ python run_tests.py --all
 # Run with coverage report
 python run_tests.py --coverage
 
-# Run specific test categories
-python run_tests.py --unit          # Unit tests
-python run_tests.py --integration   # Integration tests
-python run_tests.py --flask         # Flask endpoint tests
-python run_tests.py --websocket     # WebSocket tests
-
-# Run specific test file
-python run_tests.py --file test_app.py
-
-# Run code linting
-python run_tests.py --lint
-```
-
-#### Using pytest Directly
-```bash
-# Navigate to backend directory
-cd backend
-
-# Run all tests
-pytest -v
-
-# Run specific test file
-pytest tests/test_app.py -v
-
-# Run specific test class
-pytest tests/test_app.py::TestUtilityFunctions -v
-
-# Run with coverage
-pytest --cov=app --cov-report=html --cov-report=term-missing tests/
-
-# Run tests matching a pattern
-pytest -k "websocket" -v tests/
 ```
 
 #### Test Dependencies
@@ -327,27 +294,6 @@ pytest -k "websocket" -v tests/
 - `pytest-mock>=3.10.0` - Mocking utilities
 - `pytest-flask>=1.2.0` - Flask testing utilities
 - `pytest-asyncio>=0.21.0` - Async testing support
-
-## Docker Setup
-
-### Docker Architecture
-
-The application uses a multi-container setup:
-
-```
-┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │
-│   (Nginx)       │    │   (Flask +      │
-│   Port: 80      │◄──►│   WebSocket)    │
-│                 │    │   Ports: 5000,  │
-│                 │    │          8765   │
-└─────────────────┘    └─────────────────┘
-        │                       │
-        └───────────────────────┘
-             Docker Network
-```
-
-### Services
 
 #### Backend Service
 - **Container name**: `robot-backend`
@@ -395,88 +341,6 @@ ROBOT_MODEL=ur5
 - **Health checks** ensure service reliability
 - **Restart policies** for automatic recovery
 
-## API Documentation
-
-### REST Endpoints
-
-#### Robot State Management
-```http
-GET /robot_state
-```
-Returns current joint angles and end-effector pose.
-
-```http
-POST /set_joints
-Content-Type: application/json
-
-{
-  "joints": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
-}
-```
-Set all joint angles simultaneously.
-
-#### Movement Control
-```http
-POST /move
-Content-Type: application/json
-
-{
-  "movement_type": "trapezoidal"
-}
-```
-Start predefined movement sequence.
-
-```http
-POST /move_joint_smooth
-Content-Type: application/json
-
-{
-  "joint_index": 0,
-  "target_angle": 1.5,
-  "movement_time": 2.0,
-  "accel_time": 0.5
-}
-```
-Smoothly move individual joint.
-
-#### System Health
-```http
-GET /health
-```
-Returns service health status.
-
-#### Static Files
-```http
-GET /urdf/<filename>
-```
-Serve URDF robot model files.
-
-### WebSocket Protocol
-
-#### Connection
-```javascript
-const ws = new WebSocket('ws://localhost:8765');
-```
-
-#### Message Format
-```json
-{
-  "joint_angles": {
-    "shoulder_pan_joint": 0.1,
-    "shoulder_lift_joint": 0.2,
-    "elbow_joint": 0.3,
-    "wrist_1_joint": 0.4,
-    "wrist_2_joint": 0.5,
-    "wrist_3_joint": 0.6
-  },
-  "end_effector": {
-    "position": [1.5, 2.0, 3.0],
-    "orientation": [0.1, 0.2, 0.3]
-  },
-  "timestamp": 1696234567.123
-}
-```
-
 ## Project Structure
 
 ```
@@ -523,62 +387,5 @@ Assignment_Sereact/
         ├── collision/            # Collision meshes
         └── visual/               # Visual meshes
 ```
-
-## Contributing
-
-### Development Workflow
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. **Make your changes**
-4. **Run tests**
-   ```bash
-   cd backend
-   python run_tests.py --all
-   ```
-5. **Test with Docker**
-   ```bash
-   ./docker-build.sh up-dev
-   ```
-6. **Commit and push**
-   ```bash
-   git add .
-   git commit -m "Add your feature description"
-   git push origin feature/your-feature-name
-   ```
-7. **Create a Pull Request**
-
-### Code Style
-
-- **Python**: Follow PEP 8 standards
-- **JavaScript**: Use ES6+ features
-- **Documentation**: Update README for new features
-- **Testing**: Maintain test coverage above 90%
-
-### Adding New Features
-
-1. **Backend changes**: Update `app.py` and add tests
-2. **Frontend changes**: Update HTML/CSS/JS files
-3. **Docker changes**: Update Dockerfiles and docker-compose
-4. **Documentation**: Update relevant README sections
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- **URDFpy** for robot model parsing
-- **Flask** for the web framework
-- **Docker** for containerization
-- **Nginx** for reverse proxy capabilities
-- **Pytest** for testing framework
-
----
-
-**Happy Robot Controlling!**
 
 For questions or support, please open an issue on the GitHub repository.
