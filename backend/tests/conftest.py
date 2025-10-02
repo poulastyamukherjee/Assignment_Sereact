@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 # Add the backend directory to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 @pytest.fixture(scope="session", autouse=True)

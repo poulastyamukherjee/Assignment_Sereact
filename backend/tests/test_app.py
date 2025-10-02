@@ -12,7 +12,7 @@ import sys
 import os
 
 # Add the backend directory to the path to import app modules
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Mock the urdfpy module before importing app
 with patch('urdfpy.URDF'):

@@ -38,12 +38,16 @@ def install_dependencies():
 def run_all_tests():
     """Run all tests with verbose output."""
     return run_command([
-        sys.executable, "-m", "pytest", "-v", "--tb=short"
+        sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"
     ], "Running all tests")
 
 
 def run_specific_test(test_file):
     """Run a specific test file."""
+    # Ensure the test file path includes the tests directory
+    if not test_file.startswith("tests/"):
+        test_file = f"tests/{test_file}"
+    
     return run_command([
         sys.executable, "-m", "pytest", test_file, "-v"
     ], f"Running {test_file}")
@@ -56,7 +60,7 @@ def run_tests_with_coverage():
                   cwd=backend_dir, capture_output=True)
     
     return run_command([
-        sys.executable, "-m", "pytest", 
+        sys.executable, "-m", "pytest", "tests/",
         "--cov=app", 
         "--cov=robot_controller",
         "--cov-report=html",
@@ -68,28 +72,28 @@ def run_tests_with_coverage():
 def run_unit_tests():
     """Run only unit tests."""
     return run_command([
-        sys.executable, "-m", "pytest", "-m", "unit", "-v"
+        sys.executable, "-m", "pytest", "tests/", "-m", "unit", "-v"
     ], "Running unit tests")
 
 
 def run_integration_tests():
     """Run only integration tests."""
     return run_command([
-        sys.executable, "-m", "pytest", "-m", "integration", "-v"
+        sys.executable, "-m", "pytest", "tests/", "-m", "integration", "-v"
     ], "Running integration tests")
 
 
 def run_flask_tests():
     """Run only Flask endpoint tests."""
     return run_command([
-        sys.executable, "-m", "pytest", "-m", "flask", "-v"
+        sys.executable, "-m", "pytest", "tests/", "-m", "flask", "-v"
     ], "Running Flask endpoint tests")
 
 
 def run_websocket_tests():
     """Run only WebSocket tests."""
     return run_command([
-        sys.executable, "-m", "pytest", "-m", "websocket", "-v"
+        sys.executable, "-m", "pytest", "tests/", "-m", "websocket", "-v"
     ], "Running WebSocket tests")
 
 
@@ -108,10 +112,10 @@ def lint_code():
 def check_test_files():
     """Check which test files exist."""
     test_files = [
-        "test_app.py",
-        "test_websocket.py",
-        "conftest.py",
-        "pytest.ini"
+        "tests/test_app.py",
+        "tests/test_websocket.py",
+        "tests/conftest.py",
+        "tests/pytest.ini"
     ]
     
     print("\nTest file status:")
