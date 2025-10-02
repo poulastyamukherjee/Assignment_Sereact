@@ -21,10 +21,30 @@ This application provides a complete solution for robot arm control featuring:
 - **Forward kinematics** calculations with end-effector pose tracking
 - **Smooth motion planning** with trapezoidal velocity profiles
 - **WebSocket communication** for real-time updates
-- **RESTful API** for robot control and state management
 - **Comprehensive test suite** with pytest framework
 - **Containerized deployment** with Docker
 
+## TLDR
+
+Running the application
+
+### 1. Install Docker and Docker Compose
+- [Docker Installation](#1-install-docker-and-docker-compose)
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/poulastyamukherjee/Assignment_Sereact.git
+cd Assignment_Sereact
+```
+
+### 3. Start the Application
+```bash
+# Make the script executable
+chmod +x docker-build.sh
+
+# Build and start all services
+./docker-build.sh up
+```
 ## Architecture
 
 ### System Architecture
