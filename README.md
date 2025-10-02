@@ -26,13 +26,6 @@ This application provides a complete solution for robot arm control featuring:
 - **Comprehensive test suite** with pytest framework
 - **Containerized deployment** with Docker
 
-## Prerequisites
-
-Works on Ubuntu 20 as it comes with the following browser version for Firefox.
-Mozilla/5.0 AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0
-
-Work is underway to make it work for other browser versions as well.
-
 ## TLDR
 
 Running the application
