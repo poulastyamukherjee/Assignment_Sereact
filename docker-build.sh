@@ -4,7 +4,14 @@
 
 set -e
 
-echo "🤖 Robot Arm Control Application - Docker Setup"
+echo "Rob        echo ""
+        echo "Access the application at: http://localhost"
+        echo "Backend API: http://localhost:5000"
+        echo "WebSocket: ws://localhost:8765"
+        echo "Development mode: Hot reloading enabled"
+        echo ""
+        echo "To view logs: ./docker-build.sh logs"
+        echo "To stop: ./docker-build.sh down"ontrol Application - Docker Setup"
 echo "================================================"
 
 # Function to display usage
@@ -31,89 +38,89 @@ if command -v docker-compose &> /dev/null; then
 elif docker compose version &> /dev/null 2>&1; then
     COMPOSE_CMD="docker compose"
 else
-    echo "❌ Error: Docker Compose is not installed"
+    echo "Error: Docker Compose is not installed"
     echo "Please install Docker Compose first. See DOCKER_INSTALL.md for instructions."
     exit 1
 fi
 
 # Check if Docker is running
 if ! docker info &> /dev/null; then
-    echo "❌ Error: Docker is not running"
+    echo "Error: Docker is not running"
     echo "Please start Docker first"
     exit 1
 fi
 
 case "${1:-}" in
     "build")
-        echo "🔨 Building Docker images..."
+        echo "Building Docker images..."
         $COMPOSE_CMD build --no-cache
-        echo "✅ Build completed successfully!"
+        echo "Build completed successfully!"
         ;;
     
     "up")
-        echo "🚀 Starting Robot Arm Control Application (Production)..."
+        echo "Starting Robot Arm Control Application (Production)..."
         $COMPOSE_CMD up --build -d
         echo ""
-        echo "✅ Application started successfully!"
+        echo "Application started successfully!"
         echo ""
-        echo "🌐 Access the application at: http://localhost"
-        echo "📡 Backend API: http://localhost:5000"
-        echo "🔌 WebSocket: ws://localhost:8765"
+        echo "Access the application at: http://localhost"
+        echo "Backend API: http://localhost:5000"
+        echo "WebSocket: ws://localhost:8765"
         echo ""
-        echo "📋 To view logs: ./docker-build.sh logs"
-        echo "🛑 To stop: ./docker-build.sh down"
+        echo "To view logs: ./docker-build.sh logs"
+        echo "To stop: ./docker-build.sh down"
         ;;
     
     "up-dev")
-        echo "🚀 Starting Robot Arm Control Application (Development)..."
+        echo "Starting Robot Arm Control Application (Development)..."
         $COMPOSE_CMD -f docker-compose.yml -f docker-compose.dev.yml up --build -d
         echo ""
-        echo "✅ Application started in development mode!"
+        echo "Application started in development mode!"
         echo ""
-        echo "🌐 Access the application at: http://localhost"
-        echo "📡 Backend API: http://localhost:5000"
-        echo "🔌 WebSocket: ws://localhost:8765"
-        echo "🔧 Development mode: Hot reloading enabled"
+        echo "Access the application at: http://localhost"
+        echo "Backend API: http://localhost:5000"
+        echo "WebSocket: ws://localhost:8765"
+        echo "Development mode: Hot reloading enabled"
         echo ""
-        echo "📋 To view logs: ./docker-build.sh logs"
+        echo "To view logs: ./docker-build.sh logs"
         echo "🛑 To stop: ./docker-build.sh down"
         ;;
     
     "down")
-        echo "🛑 Stopping all services..."
+        echo "Stopping all services..."
         $COMPOSE_CMD down
-        echo "✅ All services stopped!"
+        echo "All services stopped!"
         ;;
     
     "logs")
-        echo "📋 Showing application logs..."
+        echo "Showing application logs..."
         $COMPOSE_CMD logs -f
         ;;
     
     "status")
-        echo "📊 Service Status:"
+        echo "Service Status:"
         $COMPOSE_CMD ps
         echo ""
-        echo "🔍 Health Status:"
-        $COMPOSE_CMD exec backend curl -s http://localhost:5000/health || echo "❌ Backend unhealthy"
-        $COMPOSE_CMD exec frontend curl -s http://localhost:80 > /dev/null && echo "✅ Frontend healthy" || echo "❌ Frontend unhealthy"
+        echo "Health Status:"
+        $COMPOSE_CMD exec backend curl -s http://localhost:5000/health || echo "Backend unhealthy"
+        $COMPOSE_CMD exec frontend curl -s http://localhost:80 > /dev/null && echo "Frontend healthy" || echo "Frontend unhealthy"
         ;;
     
     "restart")
-        echo "🔄 Restarting all services..."
+        echo "Restarting all services..."
         $COMPOSE_CMD restart
-        echo "✅ Services restarted!"
+        echo "Services restarted!"
         ;;
     
     "clean")
-        echo "🧹 Cleaning up Docker resources..."
-        read -p "⚠️  This will remove all containers, images, and volumes. Continue? (y/N): " -n 1 -r
+        echo "Cleaning up Docker resources..."
+        read -p "This will remove all containers, images, and volumes. Continue? (y/N): " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             $COMPOSE_CMD down -v --rmi all --remove-orphans
-            echo "✅ Cleanup completed!"
+            echo "Cleanup completed!"
         else
-            echo "❌ Cleanup cancelled"
+            echo "Cleanup cancelled"
         fi
         ;;
     

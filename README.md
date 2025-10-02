@@ -1,8 +1,8 @@
-# 🤖 6-Axis Robot Arm Control & Visualization Application
+# 6-Axis Robot Arm Control & Visualization Application
 
 A comprehensive web-based application for controlling and visualizing a 6-axis robot arm with real-time kinematics, smooth motion planning, and WebSocket communication.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
@@ -16,7 +16,7 @@ A comprehensive web-based application for controlling and visualizing a 6-axis r
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
 
-## 🎯 Overview
+## Overview
 
 This application provides a complete solution for robot arm control featuring:
 
@@ -28,7 +28,7 @@ This application provides a complete solution for robot arm control featuring:
 - **Comprehensive test suite** with pytest framework
 - **Containerized deployment** with Docker
 
-## 🏗️ Architecture
+## Architecture
 
 ### System Architecture
 
@@ -79,21 +79,21 @@ This application provides a complete solution for robot arm control featuring:
 - **Collision and visual meshes**
 - **Joint limits and constraints**
 
-## ✨ Features
+## Features
 
 ### Core Functionality
-- 🎮 **Interactive robot control** with joint-by-joint movement
-- 📊 **Real-time kinematics** with end-effector pose calculation
-- 🎯 **Smooth motion planning** using trapezoidal velocity profiles
-- 📡 **WebSocket communication** for live updates
-- 🔄 **Automatic state synchronization** between frontend and backend
+- **Interactive robot control** with joint-by-joint movement
+- **Real-time kinematics** with end-effector pose calculation
+- **Smooth motion planning** using trapezoidal velocity profiles
+- **WebSocket communication** for live updates
+- **Automatic state synchronization** between frontend and backend
 
 ### Advanced Features
-- 🧪 **Comprehensive testing** with 40+ test cases
-- 🐳 **Docker containerization** for easy deployment
-- 📈 **Health monitoring** and status checks
-- 🔧 **Development mode** with hot reloading
-- 📝 **Detailed logging** and error handling
+- **Comprehensive testing** with 40+ test cases
+- **Docker containerization** for easy deployment
+- **Health monitoring** and status checks
+- **Development mode** with hot reloading
+- **Detailed logging** and error handling
 
 ### Movement Types
 - **Sinusoidal movement** - Smooth oscillating motion
@@ -101,7 +101,7 @@ This application provides a complete solution for robot arm control featuring:
 - **Individual joint control** - Precise single-joint movements
 - **Coordinated motion** - Multi-joint synchronized movement
 
-## 🔧 Prerequisites
+## Prerequisites
 
 ### Required Software
 - **Docker** (v20.10 or higher)
@@ -143,7 +143,7 @@ newgrp docker
 sudo snap install docker
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 ```bash
@@ -171,7 +171,7 @@ chmod +x docker-build.sh
 ./docker-build.sh down
 ```
 
-## 🛠️ Development
+## Development
 
 ### Development Mode
 For development with hot reloading:
@@ -225,7 +225,7 @@ The `docker-build.sh` script provides various commands for managing the applicat
 ./docker-build.sh clean
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Test Architecture
 
@@ -246,28 +246,28 @@ backend/
 ### Test Coverage
 
 #### App.py Functions (22 Tests)
-- ✅ `send_to_websocket()` - WebSocket communication
-- ✅ `generate_movement_sequence()` - Movement generation
-- ✅ `trapezoidal_profile()` - Velocity profiles
-- ✅ `generate_trapezoidal_movement_sequence()` - Trapezoidal movement
-- ✅ `calculate_end_effector_pose()` - Forward kinematics
-- ✅ `execute_movement_sequence()` - Movement execution
-- ✅ `set_joint_angles()` - Joint angle setting
+- `send_to_websocket()` - WebSocket communication
+- `generate_movement_sequence()` - Movement generation
+- `trapezoidal_profile()` - Velocity profiles
+- `generate_trapezoidal_movement_sequence()` - Trapezoidal movement
+- `calculate_end_effector_pose()` - Forward kinematics
+- `execute_movement_sequence()` - Movement execution
+- `set_joint_angles()` - Joint angle setting
 
 #### Flask Endpoints (11 Tests)
-- ✅ `GET /` - Index page
-- ✅ `GET /health` - Health check
-- ✅ `GET /robot_state` - Robot state
-- ✅ `POST /set_joints` - Set joint angles
-- ✅ `POST /move` - Start movement
-- ✅ `POST /move_joint_smooth` - Smooth joint movement
-- ✅ `GET /urdf/<filename>` - URDF file serving
+- `GET /` - Index page
+- `GET /health` - Health check
+- `GET /robot_state` - Robot state
+- `POST /set_joints` - Set joint angles
+- `POST /move` - Start movement
+- `POST /move_joint_smooth` - Smooth joint movement
+- `GET /urdf/<filename>` - URDF file serving
 
 #### WebSocket Functions (8 Tests)
-- ✅ `send_to_all()` - Broadcast to clients
-- ✅ `has_connected_clients()` - Client connection status
-- ✅ `websocket_handler()` - Connection management
-- ✅ `run_server()` - Server startup
+- `send_to_all()` - Broadcast to clients
+- `has_connected_clients()` - Client connection status
+- `websocket_handler()` - Connection management
+- `run_server()` - Server startup
 
 ### Running Tests
 
@@ -328,7 +328,7 @@ pytest -k "websocket" -v tests/
 - `pytest-flask>=1.2.0` - Flask testing utilities
 - `pytest-asyncio>=0.21.0` - Async testing support
 
-## 🐳 Docker Setup
+## Docker Setup
 
 ### Docker Architecture
 
@@ -395,7 +395,7 @@ ROBOT_MODEL=ur5
 - **Health checks** ensure service reliability
 - **Restart policies** for automatic recovery
 
-## 📡 API Documentation
+## API Documentation
 
 ### REST Endpoints
 
@@ -477,7 +477,7 @@ const ws = new WebSocket('ws://localhost:8765');
 }
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Assignment_Sereact/
@@ -524,7 +524,7 @@ Assignment_Sereact/
         └── visual/               # Visual meshes
 ```
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Workflow
 
@@ -565,11 +565,11 @@ Assignment_Sereact/
 3. **Docker changes**: Update Dockerfiles and docker-compose
 4. **Documentation**: Update relevant README sections
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **URDFpy** for robot model parsing
 - **Flask** for the web framework
@@ -579,6 +579,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**🤖 Happy Robot Controlling! 🎮**
+**Happy Robot Controlling!**
 
 For questions or support, please open an issue on the GitHub repository.

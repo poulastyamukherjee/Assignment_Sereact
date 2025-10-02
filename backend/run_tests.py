@@ -123,7 +123,7 @@ def check_test_files():
     
     for test_file in test_files:
         file_path = backend_dir / test_file
-        status = "✓ EXISTS" if file_path.exists() else "✗ MISSING"
+        status = "EXISTS" if file_path.exists() else "MISSING"
         print(f"{test_file:<25} {status}")
 
 
@@ -196,9 +196,9 @@ def main():
         # Print final result
         print(f"\n{'='*60}")
         if success:
-            print("✓ All operations completed successfully!")
+            print("All operations completed successfully!")
         else:
-            print("✗ Some operations failed. Check the output above.")
+            print("Some operations failed. Check the output above.")
         print(f"{'='*60}")
         
         return 0 if success else 1
