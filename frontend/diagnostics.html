@@ -64,7 +64,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Robot Connection Diagnostics</h1>
+        <h1>Robot Connection Diagnostics</h1>
         
         <div id="status">
             <h3>Connection Status</h3>
@@ -131,22 +131,22 @@
                     const response = await fetch(url);
                     if (response.ok) {
                         const data = await response.json();
-                        addResult(`✅ Backend API working: ${url}`, 'success');
+                        addResult(`Backend API working: ${url}`, 'success');
                         addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
                         document.getElementById('backend-status').className = 'status online';
                         document.getElementById('backend-status').textContent = 'Online';
                         return;
                     } else {
-                        addResult(`❌ HTTP Error ${response.status}: ${url}`, 'error');
+                        addResult(` HTTP Error ${response.status}: ${url}`, 'error');
                     }
                 } catch (error) {
-                    addResult(`❌ Connection failed to ${url}: ${error.message}`, 'error');
+                    addResult(` Connection failed to ${url}: ${error.message}`, 'error');
                 }
             }
             
             document.getElementById('backend-status').className = 'status offline';
             document.getElementById('backend-status').textContent = 'Offline';
-            addResult('❌ All backend API tests failed. Is Flask server running?', 'error');
+            addResult(' All backend API tests failed. Is Flask server running?', 'error');
         }
         
         async function testSSE() {
@@ -157,7 +157,7 @@
             let messageReceived = false;
             
             eventSource.onopen = () => {
-                addResult('✅ SSE connection opened successfully', 'success');
+                addResult(' SSE connection opened successfully', 'success');
                 document.getElementById('sse-status').className = 'status online';
                 document.getElementById('sse-status').textContent = 'Online';
             };
@@ -165,14 +165,14 @@
             eventSource.onmessage = (event) => {
                 if (!messageReceived) {
                     messageReceived = true;
-                    addResult('✅ SSE data received successfully', 'success');
+                    addResult(' SSE data received successfully', 'success');
                     addResult(`<pre>${event.data}</pre>`, 'success');
                     eventSource.close();
                 }
             };
             
             eventSource.onerror = (error) => {
-                addResult('❌ SSE connection error', 'error');
+                addResult(' SSE connection error', 'error');
                 document.getElementById('sse-status').className = 'status offline';
                 document.getElementById('sse-status').textContent = 'Offline';
                 eventSource.close();
@@ -181,7 +181,7 @@
             // Timeout after 5 seconds
             setTimeout(() => {
                 if (!messageReceived) {
-                    addResult('⏱️ SSE test timeout - no data received in 5 seconds', 'warning');
+                    addResult(' SSE test timeout - no data received in 5 seconds', 'warning');
                     eventSource.close();
                 }
             }, 5000);
@@ -204,19 +204,19 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    addResult('✅ Joint control API working', 'success');
+                    addResult(' Joint control API working', 'success');
                     addResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
                 } else {
-                    addResult(`❌ Joint control failed: HTTP ${response.status}`, 'error');
+                    addResult(` Joint control failed: HTTP ${response.status}`, 'error');
                 }
             } catch (error) {
-                addResult(`❌ Joint control error: ${error.message}`, 'error');
+                addResult(` Joint control error: ${error.message}`, 'error');
             }
         }
         
         async function runFullDiagnostic() {
             clearResults();
-            addResult('🔍 Running full diagnostic...', 'warning');
+            addResult(' Running full diagnostic...', 'warning');
             
             await testBackend();
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -224,7 +224,7 @@
             await new Promise(resolve => setTimeout(resolve, 1000));
             await testJointControl();
             
-            addResult('📊 Full diagnostic complete', 'success');
+            addResult(' Full diagnostic complete', 'success');
         }
         
         // Auto-run basic tests on page load
